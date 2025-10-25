@@ -24,10 +24,10 @@ interface QAReportViewerProps {
 }
 
 const statusConfig = {
-  completed: { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-100 dark:bg-green-900', label: 'Passed' },
-  failed: { icon: XCircle, color: 'text-red-600', bg: 'bg-red-100 dark:bg-red-900', label: 'Failed' },
-  validating: { icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-100 dark:bg-yellow-900', label: 'Validating' },
-  pending: { icon: AlertCircle, color: 'text-gray-600', bg: 'bg-gray-100 dark:bg-gray-900', label: 'Pending' },
+  completed: { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-100 dark:bg-green-900', label: 'Réussi' },
+  failed: { icon: XCircle, color: 'text-red-600', bg: 'bg-red-100 dark:bg-red-900', label: 'Échoué' },
+  validating: { icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-100 dark:bg-yellow-900', label: 'En validation' },
+  pending: { icon: AlertCircle, color: 'text-gray-600', bg: 'bg-gray-100 dark:bg-gray-900', label: 'En attente' },
 };
 
 export default function QAReportViewer({ reports = [] }: QAReportViewerProps) {
@@ -73,9 +73,9 @@ export default function QAReportViewer({ reports = [] }: QAReportViewerProps) {
   return (
     <Card className="bg-card">
       <CardHeader>
-        <CardTitle>QA Validation Reports</CardTitle>
+        <CardTitle>Rapports de Validation CQ</CardTitle>
         <CardDescription>
-          Automated quality assurance results for uploaded files
+          Résultats de contrôle qualité automatisé pour les fichiers téléchargés
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -83,12 +83,12 @@ export default function QAReportViewer({ reports = [] }: QAReportViewerProps) {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="font-semibold">File Name</TableHead>
-                <TableHead className="font-semibold">Modality</TableHead>
-                <TableHead className="font-semibold">Status</TableHead>
-                <TableHead className="font-semibold">Checksum</TableHead>
+                <TableHead className="font-semibold">Nom du Fichier</TableHead>
+                <TableHead className="font-semibold">Modalité</TableHead>
+                <TableHead className="font-semibold">Statut</TableHead>
+                <TableHead className="font-semibold">Somme de Contrôle</TableHead>
                 <TableHead className="font-semibold">Format</TableHead>
-                <TableHead className="font-semibold">Timestamp</TableHead>
+                <TableHead className="font-semibold">Horodatage</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -121,7 +121,13 @@ export default function QAReportViewer({ reports = [] }: QAReportViewerProps) {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(report.created_at).toLocaleString()}
+                      {new Date(report.created_at).toLocaleString('fr-FR', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </TableCell>
                   </TableRow>
                 );
@@ -132,10 +138,10 @@ export default function QAReportViewer({ reports = [] }: QAReportViewerProps) {
         
         {mockReports.some(r => r.validation_results.errors) && (
           <div className="mt-4 space-y-2">
-            <h4 className="text-sm font-semibold text-destructive">Validation Errors:</h4>
+            <h4 className="text-sm font-semibold text-destructive">Erreurs de Validation :</h4>
             {mockReports.filter(r => r.validation_results.errors).map(report => (
               <div key={report.id} className="text-sm bg-destructive/10 p-3 rounded-lg">
-                <p className="font-medium">{report.file_name}:</p>
+                <p className="font-medium">{report.file_name} :</p>
                 <ul className="list-disc list-inside ml-2 text-muted-foreground">
                   {report.validation_results.errors?.map((error, idx) => (
                     <li key={idx}>{error}</li>

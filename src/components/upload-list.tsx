@@ -20,11 +20,11 @@ interface UploadListProps {
 }
 
 const statusConfig = {
-  pending: { icon: Clock, color: 'bg-yellow-500', label: 'Pending' },
-  uploading: { icon: Clock, color: 'bg-blue-500', label: 'Uploading' },
-  validating: { icon: AlertCircle, color: 'bg-purple-500', label: 'Validating' },
-  completed: { icon: CheckCircle2, color: 'bg-green-500', label: 'Completed' },
-  failed: { icon: XCircle, color: 'bg-red-500', label: 'Failed' },
+  pending: { icon: Clock, color: 'bg-yellow-500', label: 'En attente' },
+  uploading: { icon: Clock, color: 'bg-blue-500', label: 'Téléchargement' },
+  validating: { icon: AlertCircle, color: 'bg-purple-500', label: 'Validation' },
+  completed: { icon: CheckCircle2, color: 'bg-green-500', label: 'Terminé' },
+  failed: { icon: XCircle, color: 'bg-red-500', label: 'Échoué' },
 };
 
 const modalityColors = {
@@ -37,9 +37,9 @@ const modalityColors = {
 
 export default function UploadList({ uploads = [] }: UploadListProps) {
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return '0 Octets';
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ['Octets', 'Ko', 'Mo', 'Go'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
@@ -49,7 +49,7 @@ export default function UploadList({ uploads = [] }: UploadListProps) {
       <Card className="bg-card">
         <CardContent className="flex flex-col items-center justify-center py-12">
           <FileIcon className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">No uploads yet</p>
+          <p className="text-muted-foreground">Aucun téléchargement pour le moment</p>
         </CardContent>
       </Card>
     );
@@ -69,7 +69,13 @@ export default function UploadList({ uploads = [] }: UploadListProps) {
                     {upload.file_name}
                   </CardTitle>
                   <CardDescription className="mt-1">
-                    {formatFileSize(upload.file_size)} • {new Date(upload.created_at).toLocaleString()}
+                    {formatFileSize(upload.file_size)} • {new Date(upload.created_at).toLocaleString('fr-FR', {
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
@@ -91,7 +97,7 @@ export default function UploadList({ uploads = [] }: UploadListProps) {
                     style={{ width: `${upload.progress}%` }}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{upload.progress}% complete</p>
+                <p className="text-xs text-muted-foreground mt-1">{upload.progress}% terminé</p>
               </CardContent>
             )}
           </Card>

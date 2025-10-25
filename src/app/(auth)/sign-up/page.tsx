@@ -28,14 +28,14 @@ export default async function Signup(props: {
           <UrlProvider>
             <form className="flex flex-col space-y-6">
               <div className="space-y-2 text-center">
-                <h1 className="text-3xl font-semibold tracking-tight">Sign up</h1>
+                <h1 className="text-3xl font-semibold tracking-tight">Demander un Compte</h1>
                 <p className="text-sm text-muted-foreground">
-                  Already have an account?{" "}
+                  Déjà un compte ?{" "}
                   <Link
                     className="text-primary font-medium hover:underline transition-all"
                     href="/sign-in"
                   >
-                    Sign in
+                    Se connecter
                   </Link>
                 </p>
               </div>
@@ -43,13 +43,13 @@ export default async function Signup(props: {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="full_name" className="text-sm font-medium">
-                    Full Name
+                    Nom Complet
                   </Label>
                   <Input
                     id="full_name"
                     name="full_name"
                     type="text"
-                    placeholder="John Doe"
+                    placeholder="Jean Dupont"
                     required
                     className="w-full"
                   />
@@ -63,7 +63,7 @@ export default async function Signup(props: {
                     id="email"
                     name="email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="vous@exemple.fr"
                     required
                     className="w-full"
                   />
@@ -71,13 +71,13 @@ export default async function Signup(props: {
 
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-sm font-medium">
-                    Password
+                    Mot de passe
                   </Label>
                   <Input
                     id="password"
                     type="password"
                     name="password"
-                    placeholder="Your password"
+                    placeholder="Votre mot de passe"
                     minLength={6}
                     required
                     className="w-full"
@@ -87,10 +87,10 @@ export default async function Signup(props: {
 
               <SubmitButton
                 formAction={signUpAction}
-                pendingText="Signing up..."
+                pendingText="Création du compte..."
                 className="w-full"
               >
-                Sign up
+                Créer un compte
               </SubmitButton>
 
               <FormMessage message={searchParams} />

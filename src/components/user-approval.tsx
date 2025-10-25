@@ -68,17 +68,17 @@ export default function UserApproval({ users = [], onApprove }: UserApprovalProp
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <UserCheck className="h-5 w-5" />
-          User Approval
+          Approbation des Utilisateurs
         </CardTitle>
         <CardDescription>
-          Review and approve Principal Investigator account requests
+          Examinez et approuvez les demandes de compte des Investigateurs Principaux
         </CardDescription>
       </CardHeader>
       <CardContent>
         {pendingUsers.length === 0 ? (
           <div className="text-center py-12">
             <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-4" />
-            <p className="text-muted-foreground">No pending approvals</p>
+            <p className="text-muted-foreground">Aucune approbation en attente</p>
           </div>
         ) : (
           <div className="rounded-lg border bg-background">
@@ -86,8 +86,8 @@ export default function UserApproval({ users = [], onApprove }: UserApprovalProp
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="font-semibold">Email</TableHead>
-                  <TableHead className="font-semibold">Role</TableHead>
-                  <TableHead className="font-semibold">Requested</TableHead>
+                  <TableHead className="font-semibold">Rôle</TableHead>
+                  <TableHead className="font-semibold">Demandé le</TableHead>
                   <TableHead className="text-right font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -106,7 +106,11 @@ export default function UserApproval({ users = [], onApprove }: UserApprovalProp
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(user.created_at).toLocaleDateString()}
+                      {new Date(user.created_at).toLocaleDateString('fr-FR', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                      })}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -117,7 +121,7 @@ export default function UserApproval({ users = [], onApprove }: UserApprovalProp
                           disabled={loading === user.user_id}
                         >
                           <CheckCircle2 className="h-4 w-4 mr-1" />
-                          Approve
+                          Approuver
                         </Button>
                         <Button
                           size="sm"
@@ -126,7 +130,7 @@ export default function UserApproval({ users = [], onApprove }: UserApprovalProp
                           disabled={loading === user.user_id}
                         >
                           <XCircle className="h-4 w-4 mr-1" />
-                          Reject
+                          Rejeter
                         </Button>
                       </div>
                     </TableCell>

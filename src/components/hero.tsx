@@ -11,46 +11,49 @@ export default function Hero() {
         <div className="container mx-auto px-4">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 mb-8 tracking-tight">
-              Build{" "}
+              Plateforme de{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                Faster
+                Gestion des Données
               </span>
-              {" "}with Our Next-Gen Platform
+              {" "}PEPR PROPSY FrenchMinds
             </h1>
             
             <p className="text-xl text-gray-600 mb-12 max-w-2xl mx-auto leading-relaxed">
-              Empower your team with our cutting-edge solution. Join industry leaders who've already transformed their workflow.
+              Plateforme sécurisée pour les Investigateurs Principaux du projet PEPR PROPSY FrenchMinds. 
+              Téléchargez vos données de recherche pour le contrôle qualité et l'envoi au CRO pour monitoring et stockage sur l'EDS.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
-                href="/dashboard"
+                href="/sign-up"
                 className="inline-flex items-center px-8 py-4 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors text-lg font-medium"
               >
-                Get Started Free
+                Demander un Compte
                 <ArrowUpRight className="ml-2 w-5 h-5" />
               </Link>
               
               <Link
-                href="#pricing"
+                href="https://pepr-propsy.fr/"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center px-8 py-4 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-lg font-medium"
               >
-                View Pricing
+                En savoir plus sur PROPSY
               </Link>
             </div>
 
             <div className="mt-16 flex flex-col sm:flex-row items-center justify-center gap-8 text-sm text-gray-600">
               <div className="flex items-center gap-2">
                 <Check className="w-5 h-5 text-green-500" />
-                <span>No credit card required</span>
+                <span>Sécurité de niveau bancaire</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-5 h-5 text-green-500" />
-                <span>14-day free trial</span>
+                <span>Conformité RGPD</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-5 h-5 text-green-500" />
-                <span>Cancel anytime</span>
+                <span>Support dédié</span>
               </div>
             </div>
           </div>

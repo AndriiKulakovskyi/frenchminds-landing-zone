@@ -43,8 +43,8 @@ export default function DashboardNavbar() {
     if (!userRole) return null
     
     const roleConfig = {
-      admin: { label: 'Administrator', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' },
-      principal_investigator: { label: 'Principal Investigator', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
+      admin: { label: 'Administrateur', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' },
+      principal_investigator: { label: 'Investigateur Principal', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
     }
     
     const config = roleConfig[userRole as keyof typeof roleConfig]
@@ -58,7 +58,7 @@ export default function DashboardNavbar() {
       <div className="container mx-auto px-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
           <Link href="/dashboard" prefetch className="text-xl font-bold">
-            Clinical Portal
+            Portail FrenchMinds
           </Link>
           {getRoleBadge()}
         </div>
@@ -79,7 +79,7 @@ export default function DashboardNavbar() {
                 await supabase.auth.signOut()
                 router.push('/sign-in')
               }}>
-                Sign out
+                Déconnexion
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

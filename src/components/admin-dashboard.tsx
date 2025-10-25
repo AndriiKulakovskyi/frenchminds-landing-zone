@@ -42,28 +42,28 @@ export default function AdminDashboard() {
 
   const stats = [
     {
-      title: 'Total Uploads',
+      title: 'Total Téléchargements',
       value: '247',
       change: '+12%',
       icon: Upload,
       color: 'text-blue-600',
     },
     {
-      title: 'Pending Approvals',
+      title: 'Approbations en Attente',
       value: '2',
       change: '-1',
       icon: UserCheck,
       color: 'text-orange-600',
     },
     {
-      title: 'QA Pass Rate',
+      title: 'Taux de Réussite CQ',
       value: '98.5%',
       change: '+2.1%',
       icon: FileCheck,
       color: 'text-green-600',
     },
     {
-      title: 'Compliance Score',
+      title: 'Score de Conformité',
       value: '100%',
       change: '0%',
       icon: Shield,
@@ -77,9 +77,9 @@ export default function AdminDashboard() {
       <main className="w-full bg-background min-h-screen">
         <div className="container mx-auto px-4 py-8">
           <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-2">Administrator Dashboard</h1>
+            <h1 className="text-4xl font-bold mb-2">Tableau de Bord Administrateur</h1>
             <p className="text-muted-foreground text-lg">
-              Manage users, monitor uploads, and review QA status
+              Gérez les utilisateurs, surveillez les téléchargements et examinez le statut CQ
             </p>
           </div>
 
@@ -97,7 +97,7 @@ export default function AdminDashboard() {
                   <p className="text-xs text-muted-foreground">
                     <span className={stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
                       {stat.change}
-                    </span> from last month
+                    </span> depuis le mois dernier
                   </p>
                 </CardContent>
               </Card>
@@ -108,15 +108,15 @@ export default function AdminDashboard() {
             <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid bg-muted p-1">
               <TabsTrigger value="approvals" className="data-[state=active]:bg-background">
                 <UserCheck className="h-4 w-4 mr-2" />
-                User Approvals
+                Approbations Utilisateurs
               </TabsTrigger>
               <TabsTrigger value="uploads" className="data-[state=active]:bg-background">
                 <Upload className="h-4 w-4 mr-2" />
-                All Uploads
+                Tous les Téléchargements
               </TabsTrigger>
               <TabsTrigger value="qa" className="data-[state=active]:bg-background">
                 <FileCheck className="h-4 w-4 mr-2" />
-                QA Status
+                Statut Contrôle Qualité
               </TabsTrigger>
             </TabsList>
 
@@ -127,9 +127,9 @@ export default function AdminDashboard() {
             <TabsContent value="uploads">
               <Card className="bg-card">
                 <CardHeader>
-                  <CardTitle>All Data Uploads</CardTitle>
+                  <CardTitle>Tous les Téléchargements de Données</CardTitle>
                   <CardDescription>
-                    Complete history of uploads from all Principal Investigators
+                    Historique complet des téléchargements de tous les Investigateurs Principaux
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
