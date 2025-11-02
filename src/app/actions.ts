@@ -42,6 +42,7 @@ export const signUpAction = async (formData: FormData) => {
 
   if (user) {
     try {
+      // Create user profile
       const { error: updateError } = await supabase
         .from('users')
         .insert({
@@ -56,6 +57,21 @@ export const signUpAction = async (formData: FormData) => {
 
       if (updateError) {
         console.error('Error updating user profile:', updateError);
+      }
+
+      // Create user role as PI (pending approval)
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: user.id,
+          role: 'principal_investigator',
+          approved: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+      if (roleError) {
+        console.error('Error creating user role:', roleError);
       }
     } catch (err) {
       console.error('Error in user profile creation:', err);
@@ -161,4 +177,64 @@ export const signOutAction = async () => {
   const supabase = await createClient();
   await supabase.auth.signOut();
   return redirect("/sign-in");
+};
+
+export const approveUserAction = async (userId: string) => {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
+
+  // Check if current user is admin
+  const { isAdmin } = await import("@/utils/auth");
+  const isCurrentUserAdmin = await isAdmin(user.id);
+  if (!isCurrentUserAdmin) {
+    throw new Error("Unauthorized: Admin access required");
+  }
+
+  // Approve the user
+  const { error } = await supabase
+    .from('user_roles')
+    .update({
+      approved: true,
+      approved_by: user.id,
+      approved_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('user_id', userId);
+
+  if (error) {
+    throw new Error(`Failed to approve user: ${error.message}`);
+  }
+
+  return { success: true };
+};
+
+export const rejectUserAction = async (userId: string) => {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
+
+  // Check if current user is admin
+  const { isAdmin } = await import("@/utils/auth");
+  const isCurrentUserAdmin = await isAdmin(user.id);
+  if (!isCurrentUserAdmin) {
+    throw new Error("Unauthorized: Admin access required");
+  }
+
+  // Delete the user from auth.users (this will cascade to other tables)
+  const { error } = await supabase.auth.admin.deleteUser(userId);
+
+  if (error) {
+    throw new Error(`Failed to reject user: ${error.message}`);
+  }
+
+  return { success: true };
 };

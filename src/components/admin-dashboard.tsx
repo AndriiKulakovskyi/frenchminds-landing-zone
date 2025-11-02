@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import UserApproval from "@/components/user-approval";
 import UploadList from "@/components/upload-list";
@@ -8,6 +8,7 @@ import QAReportViewer from "@/components/qa-report-viewer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, UserCheck, FileCheck, Shield } from "lucide-react";
+import { createClient } from "../../supabase/client";
 
 export default function AdminDashboard() {
   const [allUploads] = useState<any[]>([
@@ -40,30 +41,64 @@ export default function AdminDashboard() {
     },
   ]);
 
+  const [pendingApprovals, setPendingApprovals] = useState(0);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  // Fetch pending approvals count
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const supabase = createClient();
+        const { count, error } = await supabase
+          .from('user_roles')
+          .select('*', { count: 'exact', head: true })
+          .eq('approved', false);
+
+        if (error) {
+          console.error('Error fetching pending count:', error);
+          return;
+        }
+
+        setPendingApprovals(count || 0);
+      } catch (error) {
+        console.error('Error fetching pending count:', error);
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+
+    fetchPendingCount();
+  }, []);
+
+  const handleUserApproved = () => {
+    // Refresh the pending count when a user is approved
+    setPendingApprovals(prev => Math.max(0, prev - 1));
+  };
+
   const stats = [
     {
-      title: 'Total Téléchargements',
+      title: 'Total Uploads',
       value: '247',
       change: '+12%',
       icon: Upload,
       color: 'text-blue-600',
     },
     {
-      title: 'Approbations en Attente',
-      value: '2',
+      title: 'Pending Approvals',
+      value: isLoadingStats ? '...' : pendingApprovals.toString(),
       change: '-1',
       icon: UserCheck,
       color: 'text-orange-600',
     },
     {
-      title: 'Taux de Réussite CQ',
+      title: 'QA Success Rate',
       value: '98.5%',
       change: '+2.1%',
       icon: FileCheck,
       color: 'text-green-600',
     },
     {
-      title: 'Score de Conformité',
+      title: 'Compliance Score',
       value: '100%',
       change: '0%',
       icon: Shield,
@@ -77,9 +112,9 @@ export default function AdminDashboard() {
       <main className="w-full bg-background min-h-screen">
         <div className="container mx-auto px-4 py-8">
           <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-2">Tableau de Bord Administrateur</h1>
+            <h1 className="text-4xl font-bold mb-2">Admin Dashboard</h1>
             <p className="text-muted-foreground text-lg">
-              Gérez les utilisateurs, surveillez les téléchargements et examinez le statut CQ
+              Manage users, monitor uploads, and review QA status
             </p>
           </div>
 
@@ -97,7 +132,7 @@ export default function AdminDashboard() {
                   <p className="text-xs text-muted-foreground">
                     <span className={stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
                       {stat.change}
-                    </span> depuis le mois dernier
+                    </span> from last month
                   </p>
                 </CardContent>
               </Card>
@@ -108,28 +143,28 @@ export default function AdminDashboard() {
             <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid bg-muted p-1">
               <TabsTrigger value="approvals" className="data-[state=active]:bg-background">
                 <UserCheck className="h-4 w-4 mr-2" />
-                Approbations Utilisateurs
+                User Approvals
               </TabsTrigger>
               <TabsTrigger value="uploads" className="data-[state=active]:bg-background">
                 <Upload className="h-4 w-4 mr-2" />
-                Tous les Téléchargements
+                All Uploads
               </TabsTrigger>
               <TabsTrigger value="qa" className="data-[state=active]:bg-background">
                 <FileCheck className="h-4 w-4 mr-2" />
-                Statut Contrôle Qualité
+                QA Status
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="approvals">
-              <UserApproval />
+              <UserApproval onApprove={handleUserApproved} />
             </TabsContent>
 
             <TabsContent value="uploads">
               <Card className="bg-card">
                 <CardHeader>
-                  <CardTitle>Tous les Téléchargements de Données</CardTitle>
+                  <CardTitle>All Data Uploads</CardTitle>
                   <CardDescription>
-                    Historique complet des téléchargements de tous les Investigateurs Principaux
+                    Complete history of uploads from all Principal Investigators
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
