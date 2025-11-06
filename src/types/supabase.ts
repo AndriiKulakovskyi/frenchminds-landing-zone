@@ -65,6 +65,8 @@ export type Database = {
           metadata: Json | null
           modality: Database["public"]["Enums"]["data_modality"]
           progress: number | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           status: Database["public"]["Enums"]["upload_status"] | null
           updated_at: string | null
           uploaded_by: string | null
@@ -81,6 +83,8 @@ export type Database = {
           metadata?: Json | null
           modality: Database["public"]["Enums"]["data_modality"]
           progress?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: Database["public"]["Enums"]["upload_status"] | null
           updated_at?: string | null
           uploaded_by?: string | null
@@ -97,6 +101,8 @@ export type Database = {
           metadata?: Json | null
           modality?: Database["public"]["Enums"]["data_modality"]
           progress?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: Database["public"]["Enums"]["upload_status"] | null
           updated_at?: string | null
           uploaded_by?: string | null

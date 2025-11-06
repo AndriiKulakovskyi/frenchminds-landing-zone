@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import UserApproval from "@/components/user-approval";
-import UploadList from "@/components/upload-list";
+import AdminUploadsTable from "@/components/admin-uploads-table";
 import QAReportViewer from "@/components/qa-report-viewer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,89 +11,70 @@ import { Upload, UserCheck, FileCheck, Shield } from "lucide-react";
 import { createClient } from "../../supabase/client";
 
 export default function AdminDashboard() {
-  const [allUploads] = useState<any[]>([
-    {
-      id: '1',
-      file_name: 'patient_001_mri.dcm',
-      modality: 'mri',
-      status: 'completed',
-      progress: 100,
-      file_size: 524288000,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      file_name: 'patient_002_clinical.csv',
-      modality: 'clinical',
-      status: 'completed',
-      progress: 100,
-      file_size: 2048000,
-      created_at: new Date(Date.now() - 3600000).toISOString(),
-    },
-    {
-      id: '3',
-      file_name: 'patient_003_genomic.vcf',
-      modality: 'genomic',
-      status: 'failed',
-      progress: 0,
-      file_size: 10485760,
-      created_at: new Date(Date.now() - 7200000).toISOString(),
-    },
-  ]);
-
   const [pendingApprovals, setPendingApprovals] = useState(0);
+  const [totalUploads, setTotalUploads] = useState(0);
+  const [treatedUploads, setTreatedUploads] = useState(0);
+  const [notTreatedUploads, setNotTreatedUploads] = useState(0);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-  // Fetch pending approvals count
+  // Fetch statistics
   useEffect(() => {
-    const fetchPendingCount = async () => {
+    const fetchStats = async () => {
       try {
+        setIsLoadingStats(true);
         const supabase = createClient();
-        const { count, error } = await supabase
+
+        // Fetch pending approvals count
+        const { count: pendingCount } = await supabase
           .from('user_roles')
           .select('*', { count: 'exact', head: true })
           .eq('approved', false);
 
-        if (error) {
-          console.error('Error fetching pending count:', error);
-          return;
-        }
+        setPendingApprovals(pendingCount || 0);
 
-        setPendingApprovals(count || 0);
+        // Fetch uploads statistics
+        const { data: uploads } = await supabase
+          .from('data_uploads')
+          .select('reviewed_by');
+
+        if (uploads) {
+          setTotalUploads(uploads.length);
+          setTreatedUploads(uploads.filter(u => u.reviewed_by !== null).length);
+          setNotTreatedUploads(uploads.filter(u => u.reviewed_by === null).length);
+        }
       } catch (error) {
-        console.error('Error fetching pending count:', error);
+        console.error('Error fetching stats:', error);
       } finally {
         setIsLoadingStats(false);
       }
     };
 
-    fetchPendingCount();
+    fetchStats();
   }, []);
 
   const handleUserApproved = () => {
-    // Refresh the pending count when a user is approved
     setPendingApprovals(prev => Math.max(0, prev - 1));
   };
 
   const stats = [
     {
       title: 'Total Uploads',
-      value: '247',
-      change: '+12%',
+      value: isLoadingStats ? '...' : totalUploads.toString(),
+      change: notTreatedUploads > 0 ? `${notTreatedUploads} pending` : 'All treated',
       icon: Upload,
       color: 'text-blue-600',
     },
     {
       title: 'Pending Approvals',
       value: isLoadingStats ? '...' : pendingApprovals.toString(),
-      change: '-1',
+      change: pendingApprovals > 0 ? 'Requires action' : 'None',
       icon: UserCheck,
       color: 'text-orange-600',
     },
     {
-      title: 'QA Success Rate',
-      value: '98.5%',
-      change: '+2.1%',
+      title: 'Treated Uploads',
+      value: isLoadingStats ? '...' : treatedUploads.toString(),
+      change: totalUploads > 0 ? `${Math.round((treatedUploads / totalUploads) * 100)}%` : '0%',
       icon: FileCheck,
       color: 'text-green-600',
     },
@@ -130,9 +111,9 @@ export default function AdminDashboard() {
                 <CardContent>
                   <div className="text-3xl font-bold mb-1">{stat.value}</div>
                   <p className="text-xs text-muted-foreground">
-                    <span className={stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
+                    <span className={stat.change.includes('+') ? 'text-green-600' : stat.change.includes('pending') || stat.change.includes('Requires') ? 'text-orange-600' : 'text-muted-foreground'}>
                       {stat.change}
-                    </span> from last month
+                    </span>
                   </p>
                 </CardContent>
               </Card>
@@ -160,17 +141,7 @@ export default function AdminDashboard() {
             </TabsContent>
 
             <TabsContent value="uploads">
-              <Card className="bg-card">
-                <CardHeader>
-                  <CardTitle>All Data Uploads</CardTitle>
-                  <CardDescription>
-                    Complete history of uploads from all Principal Investigators
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <UploadList uploads={allUploads} />
-                </CardContent>
-              </Card>
+              <AdminUploadsTable />
             </TabsContent>
 
             <TabsContent value="qa">
