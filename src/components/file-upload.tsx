@@ -4,70 +4,125 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, FileIcon, X } from "lucide-react";
+import { Upload, FileIcon, X, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { createClient } from "../../supabase/client";
 
 export type DataModality = 'clinical' | 'wearable' | 'neuropsychological' | 'mri' | 'genomic';
 
 interface FileUploadProps {
   onUploadComplete?: (fileData: any) => void;
-  patientId?: string;
   preselectedModality?: DataModality;
 }
 
-export default function FileUpload({ onUploadComplete, patientId, preselectedModality }: FileUploadProps) {
+export default function FileUpload({ onUploadComplete, preselectedModality }: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [modality, setModality] = useState<DataModality | ''>(preselectedModality || '');
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [patientIdentifier, setPatientIdentifier] = useState('');
-  const [studyId, setStudyId] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
+      setError(null);
+      setUploadSuccess(false);
     }
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !modality || !patientIdentifier || !studyId) {
+    if (!selectedFile || !modality) {
       return;
     }
 
     setUploading(true);
     setProgress(0);
+    setError(null);
+    setUploadSuccess(false);
 
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 95) {
-          clearInterval(progressInterval);
-          return 95;
-        }
-        return prev + 5;
-      });
-    }, 200);
-
-    setTimeout(() => {
-      clearInterval(progressInterval);
-      setProgress(100);
-      setUploading(false);
-      setSelectedFile(null);
-      setModality('');
-      setPatientIdentifier('');
-      setStudyId('');
+    try {
+      const supabase = createClient();
       
-      if (onUploadComplete) {
-        onUploadComplete({
-          file_name: selectedFile.name,
-          modality,
-          file_size: selectedFile.size,
-          patient_identifier: patientIdentifier,
-          study_id: studyId,
-        });
+      // Get current authenticated user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('You must be logged in to upload files');
       }
-    }, 4000);
+
+      // Generate unique file path: modality/user_id/timestamp_filename
+      const timestamp = Date.now();
+      const fileExt = selectedFile.name.split('.').pop();
+      const sanitizedFileName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const storagePath = `${modality}/${user.id}/${timestamp}_${sanitizedFileName}`;
+
+      // Upload file to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase
+        .storage
+        .from('clinical-data-uploads')
+        .upload(storagePath, selectedFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw new Error(`Failed to upload file: ${uploadError.message}`);
+      }
+
+      setProgress(50);
+
+      // Calculate file checksum (simple hash using file size and name)
+      const checksum = `${selectedFile.size}-${selectedFile.name}-${timestamp}`;
+
+      // Insert record into data_uploads table
+      const { data: dbData, error: dbError } = await supabase
+        .from('data_uploads')
+        .insert({
+          uploaded_by: user.id,
+          modality: modality,
+          file_name: selectedFile.name,
+          file_size: selectedFile.size,
+          file_path: uploadData.path,
+          checksum: checksum,
+          status: 'completed',
+          progress: 100,
+          completed_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (dbError) {
+        console.error('Database insert error:', dbError);
+        // Try to clean up uploaded file
+        await supabase.storage.from('clinical-data-uploads').remove([uploadData.path]);
+        throw new Error(`Failed to save upload record: ${dbError.message}`);
+      }
+
+      setProgress(100);
+      setUploadSuccess(true);
+      
+      // Reset form after short delay
+      setTimeout(() => {
+        setSelectedFile(null);
+        setModality(preselectedModality || '');
+        setUploading(false);
+        setUploadSuccess(false);
+        
+        if (onUploadComplete) {
+          onUploadComplete(dbData);
+        }
+      }, 2000);
+
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      setError(err.message || 'An error occurred during upload');
+      setUploading(false);
+      setProgress(0);
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -95,29 +150,6 @@ export default function FileUpload({ onUploadComplete, patientId, preselectedMod
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="patient-id">Identifiant Patient *</Label>
-            <Input
-              id="patient-id"
-              placeholder="ex: PT-001"
-              value={patientIdentifier}
-              onChange={(e) => setPatientIdentifier(e.target.value)}
-              disabled={uploading}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="study-id">ID Étude *</Label>
-            <Input
-              id="study-id"
-              placeholder="ex: ETUDE-2024-001"
-              value={studyId}
-              onChange={(e) => setStudyId(e.target.value)}
-              disabled={uploading}
-            />
-          </div>
-        </div>
-
         {!preselectedModality && (
           <div className="space-y-2">
             <Label htmlFor="modality">Modalité de Données *</Label>
@@ -192,6 +224,20 @@ export default function FileUpload({ onUploadComplete, patientId, preselectedMod
           </div>
         </div>
 
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {uploadSuccess && (
+          <Alert className="bg-green-50 text-green-900 border-green-200 dark:bg-green-950 dark:text-green-100 dark:border-green-800">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>File uploaded successfully!</AlertDescription>
+          </Alert>
+        )}
+
         {uploading && (
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
@@ -204,7 +250,7 @@ export default function FileUpload({ onUploadComplete, patientId, preselectedMod
 
         <Button
           onClick={handleUpload}
-          disabled={!selectedFile || !modality || !patientIdentifier || !studyId || uploading}
+          disabled={!selectedFile || !modality || uploading}
           className="w-full"
           size="lg"
         >

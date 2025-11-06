@@ -35,9 +35,9 @@ export default function DashboardClient() {
       color: 'text-blue-600',
     },
     {
-      title: 'Active Patients',
-      value: '89',
-      change: '+5%',
+      title: 'Data Modalities',
+      value: '5',
+      change: '0%',
       icon: Database,
       color: 'text-green-600',
     },

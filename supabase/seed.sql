@@ -33,7 +33,6 @@ BEGIN
     DELETE FROM public.user_roles WHERE true;
     DELETE FROM public.users WHERE true;
     DELETE FROM public.data_uploads WHERE true;
-    DELETE FROM public.patients WHERE true;
     DELETE FROM public.audit_logs WHERE true;
     DELETE FROM auth.users WHERE true;
     

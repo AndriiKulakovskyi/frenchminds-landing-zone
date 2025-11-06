@@ -64,7 +64,6 @@ export type Database = {
           id: string
           metadata: Json | null
           modality: Database["public"]["Enums"]["data_modality"]
-          patient_id: string | null
           progress: number | null
           status: Database["public"]["Enums"]["upload_status"] | null
           updated_at: string | null
@@ -81,7 +80,6 @@ export type Database = {
           id?: string
           metadata?: Json | null
           modality: Database["public"]["Enums"]["data_modality"]
-          patient_id?: string | null
           progress?: number | null
           status?: Database["public"]["Enums"]["upload_status"] | null
           updated_at?: string | null
@@ -98,50 +96,11 @@ export type Database = {
           id?: string
           metadata?: Json | null
           modality?: Database["public"]["Enums"]["data_modality"]
-          patient_id?: string | null
           progress?: number | null
           status?: Database["public"]["Enums"]["upload_status"] | null
           updated_at?: string | null
           uploaded_by?: string | null
           validation_results?: Json | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "data_uploads_patient_id_fkey"
-            columns: ["patient_id"]
-            isOneToOne: false
-            referencedRelation: "patients"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      patients: {
-        Row: {
-          created_at: string | null
-          created_by: string | null
-          id: string
-          metadata: Json | null
-          patient_identifier: string
-          study_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          metadata?: Json | null
-          patient_identifier: string
-          study_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          metadata?: Json | null
-          patient_identifier?: string
-          study_id?: string
-          updated_at?: string | null
         }
         Relationships: []
       }

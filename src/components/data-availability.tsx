@@ -5,71 +5,76 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 
-interface PatientData {
-  patient_identifier: string;
-  study_id: string;
-  clinical: boolean;
-  wearable: boolean;
-  neuropsychological: boolean;
-  mri: boolean;
-  genomic: boolean;
+interface ModalityStats {
+  modality: string;
+  totalUploads: number;
+  validated: number;
+  pending: number;
+  failed: number;
 }
 
 interface DataAvailabilityProps {
-  patients?: PatientData[];
+  modalityStats?: ModalityStats[];
 }
 
-const modalities = [
-  { key: 'clinical', label: 'Clinical' },
-  { key: 'wearable', label: 'Wearable' },
-  { key: 'neuropsychological', label: 'Neuropsych' },
-  { key: 'mri', label: 'MRI' },
-  { key: 'genomic', label: 'Genomic' },
-];
+const modalityLabels = {
+  clinical: 'Clinical Data',
+  wearable: 'Wearable Devices',
+  neuropsychological: 'Neuropsych Tests',
+  mri: 'MRI Scans',
+  genomic: 'Genomic Data',
+};
 
-export default function DataAvailability({ patients = [] }: DataAvailabilityProps) {
-  const mockPatients: PatientData[] = patients.length > 0 ? patients : [
+export default function DataAvailability({ modalityStats = [] }: DataAvailabilityProps) {
+  const mockStats: ModalityStats[] = modalityStats.length > 0 ? modalityStats : [
     {
-      patient_identifier: 'PT-001',
-      study_id: 'STUDY-2024-001',
-      clinical: true,
-      wearable: true,
-      neuropsychological: true,
-      mri: false,
-      genomic: true,
+      modality: 'clinical',
+      totalUploads: 45,
+      validated: 43,
+      pending: 2,
+      failed: 0,
     },
     {
-      patient_identifier: 'PT-002',
-      study_id: 'STUDY-2024-001',
-      clinical: true,
-      wearable: false,
-      neuropsychological: true,
-      mri: true,
-      genomic: false,
+      modality: 'wearable',
+      totalUploads: 38,
+      validated: 35,
+      pending: 2,
+      failed: 1,
     },
     {
-      patient_identifier: 'PT-003',
-      study_id: 'STUDY-2024-002',
-      clinical: true,
-      wearable: true,
-      neuropsychological: false,
-      mri: true,
-      genomic: true,
+      modality: 'neuropsychological',
+      totalUploads: 32,
+      validated: 30,
+      pending: 1,
+      failed: 1,
+    },
+    {
+      modality: 'mri',
+      totalUploads: 28,
+      validated: 26,
+      pending: 1,
+      failed: 1,
+    },
+    {
+      modality: 'genomic',
+      totalUploads: 15,
+      validated: 14,
+      pending: 1,
+      failed: 0,
     },
   ];
 
-  const calculateCompleteness = (patient: PatientData) => {
-    const total = modalities.length;
-    const available = modalities.filter(m => patient[m.key as keyof PatientData]).length;
-    return Math.round((available / total) * 100);
+  const calculateSuccessRate = (stats: ModalityStats) => {
+    if (stats.totalUploads === 0) return 0;
+    return Math.round((stats.validated / stats.totalUploads) * 100);
   };
 
   return (
     <Card className="bg-card">
       <CardHeader>
-        <CardTitle>Patient Data Availability</CardTitle>
+        <CardTitle>Data Modality Overview</CardTitle>
         <CardDescription>
-          Overview of validated data across all modalities
+          Upload statistics across all data modalities
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -77,42 +82,51 @@ export default function DataAvailability({ patients = [] }: DataAvailabilityProp
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="font-semibold">Patient ID</TableHead>
-                <TableHead className="font-semibold">Study</TableHead>
-                {modalities.map(m => (
-                  <TableHead key={m.key} className="text-center font-semibold">
-                    {m.label}
-                  </TableHead>
-                ))}
-                <TableHead className="text-center font-semibold">Complete</TableHead>
+                <TableHead className="font-semibold">Data Modality</TableHead>
+                <TableHead className="text-center font-semibold">Total Uploads</TableHead>
+                <TableHead className="text-center font-semibold">Validated</TableHead>
+                <TableHead className="text-center font-semibold">Pending</TableHead>
+                <TableHead className="text-center font-semibold">Failed</TableHead>
+                <TableHead className="text-center font-semibold">Success Rate</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockPatients.map((patient, idx) => {
-                const completeness = calculateCompleteness(patient);
+              {mockStats.map((stat, idx) => {
+                const successRate = calculateSuccessRate(stat);
                 return (
                   <TableRow key={idx} className="hover:bg-muted/30">
-                    <TableCell className="font-medium">{patient.patient_identifier}</TableCell>
-                    <TableCell>
+                    <TableCell className="font-medium">
+                      {modalityLabels[stat.modality as keyof typeof modalityLabels] || stat.modality}
+                    </TableCell>
+                    <TableCell className="text-center">
                       <Badge variant="outline" className="font-normal">
-                        {patient.study_id}
+                        {stat.totalUploads}
                       </Badge>
                     </TableCell>
-                    {modalities.map(m => (
-                      <TableCell key={m.key} className="text-center">
-                        {patient[m.key as keyof PatientData] ? (
-                          <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mx-auto" />
-                        ) : (
-                          <XCircle className="h-5 w-5 text-muted-foreground/40 mx-auto" />
-                        )}
-                      </TableCell>
-                    ))}
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <span>{stat.validated}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                        <span>{stat.pending}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        <span>{stat.failed}</span>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <span className="font-semibold text-sm">{completeness}%</span>
-                        {completeness === 100 ? (
+                        <span className="font-semibold text-sm">{successRate}%</span>
+                        {successRate === 100 ? (
                           <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        ) : completeness >= 60 ? (
+                        ) : successRate >= 80 ? (
                           <AlertCircle className="h-4 w-4 text-yellow-600" />
                         ) : (
                           <XCircle className="h-4 w-4 text-red-600" />
