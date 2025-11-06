@@ -61,6 +61,7 @@ export type Database = {
           file_name: string
           file_path: string | null
           file_size: number
+          file_type: string | null
           id: string
           metadata: Json | null
           modality: Database["public"]["Enums"]["data_modality"]
@@ -83,6 +84,7 @@ export type Database = {
           file_name: string
           file_path?: string | null
           file_size: number
+          file_type?: string | null
           id?: string
           metadata?: Json | null
           modality: Database["public"]["Enums"]["data_modality"]
@@ -105,6 +107,7 @@ export type Database = {
           file_name?: string
           file_path?: string | null
           file_size?: number
+          file_type?: string | null
           id?: string
           metadata?: Json | null
           modality?: Database["public"]["Enums"]["data_modality"]

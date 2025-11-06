@@ -10,6 +10,7 @@ export interface CsvQaReport {
   fileName: string;
   fileSize: number;
   encoding: string;
+  fileType?: string; // e.g., 'clinical-generic', 'wearable-fitbit', 'wearable-questionnaire'
   
   // Structure metrics
   totalRows: number;
@@ -85,6 +86,39 @@ function detectDelimiter(content: string): string {
   
   counts.sort((a, b) => b.count - a.count);
   return counts[0].count > 0 ? counts[0].delimiter : ',';
+}
+
+/**
+ * Detects the specific file type based on column headers
+ */
+function detectFileType(columnNames: string[], modality: string): string {
+  // Normalize column names (trim, lowercase)
+  const normalized = columnNames.map(col => col.trim().toLowerCase());
+  
+  if (modality === 'clinical') {
+    return 'clinical-generic';
+  }
+  
+  if (modality === 'wearable') {
+    // Fitbit signature columns
+    const fitbitSignature = ['id', 'num_jour', 'date_jour', 'heure_endor', 'duree_sommeil', 'score_sommeil'];
+    const fitbitMatches = fitbitSignature.filter(col => normalized.includes(col)).length;
+    
+    // Questionnaire signature columns
+    const questionnaireSignature = ['identification.id', 'age', 'sex', 'height', 'weight', 'shaps_q1', 'isi_q1'];
+    const questionnaireMatches = questionnaireSignature.filter(col => normalized.includes(col)).length;
+    
+    if (fitbitMatches >= 4) return 'wearable-fitbit';
+    if (questionnaireMatches >= 4) return 'wearable-questionnaire';
+    
+    return 'wearable-unknown';
+  }
+  
+  if (modality === 'neuropsychological') {
+    return 'neuropsychological-generic';
+  }
+  
+  return 'unknown';
 }
 
 /**
@@ -279,7 +313,7 @@ function validateColumnNames(columnNames: string[]): { errors: string[], warning
 /**
  * Main QA analysis function for CSV files
  */
-export async function analyzeCsvFile(file: File): Promise<CsvQaReport> {
+export async function analyzeCsvFile(file: File, modality?: string): Promise<CsvQaReport> {
   const errors: string[] = [];
   const warnings: string[] = [];
   
@@ -307,6 +341,9 @@ export async function analyzeCsvFile(file: File): Promise<CsvQaReport> {
     const hasHeader = true; // Assume first row is header
     const columnNames = rows[0];
     const dataRows = rows.slice(1);
+    
+    // Detect file type based on column headers
+    const fileType = detectFileType(columnNames, modality || 'unknown');
     
     // Validate column names
     const columnValidation = validateColumnNames(columnNames);
@@ -374,6 +411,7 @@ export async function analyzeCsvFile(file: File): Promise<CsvQaReport> {
       fileName: file.name,
       fileSize: file.size,
       encoding: 'UTF-8', // Browsers read as UTF-8 by default
+      fileType, // Detected file type
       
       totalRows: dataRows.length,
       totalColumns: columnNames.length,

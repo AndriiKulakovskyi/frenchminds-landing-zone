@@ -36,17 +36,22 @@ export default function CsvQaReportViewer({ report, onAccept, onReject }: CsvQaR
     <div className="space-y-6">
       {/* Header Status */}
       <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                QA Report: {report.fileName}
-              </CardTitle>
-              <CardDescription>
-                Analyzed at {new Date(report.analyzedAt).toLocaleString()}
-              </CardDescription>
-            </div>
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              QA Report: {report.fileName}
+            </CardTitle>
+            <CardDescription>
+              Analyzed at {new Date(report.analyzedAt).toLocaleString()}
+              {report.fileType && (
+                <Badge variant="outline" className="ml-2">
+                  {report.fileType}
+                </Badge>
+              )}
+            </CardDescription>
+          </div>
             <div className="flex flex-col items-end gap-2">
               {report.isValid ? (
                 <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">

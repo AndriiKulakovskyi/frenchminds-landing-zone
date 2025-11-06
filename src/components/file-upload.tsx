@@ -58,7 +58,7 @@ export default function FileUpload({ onUploadComplete, preselectedModality }: Fi
       // Simulate progress during analysis
       setProgress(30);
       console.log('Calling analyzeCsvFile...');
-      const report = await analyzeCsvFile(selectedFile);
+      const report = await analyzeCsvFile(selectedFile, modality as string);
       console.log('QA report received:', report);
       setProgress(90);
       setQaReport(report);
@@ -210,6 +210,7 @@ export default function FileUpload({ onUploadComplete, preselectedModality }: Fi
           qa_score: qaScore,
           qa_report: qaReport || null,
           qa_completed_at: qaReport ? new Date().toISOString() : null,
+          file_type: qaReport?.fileType || null,
           completed_at: new Date().toISOString()
         })
         .select()

@@ -15,6 +15,7 @@ interface QAReport {
   id: string;
   file_name: string;
   file_size: number;
+  file_type: string | null;
   modality: string;
   status: string;
   qa_status: string | null;
@@ -73,7 +74,7 @@ export default function QAReportViewer({ userId, reports = [] }: QAReportViewerP
       
       let query = supabase
         .from('data_uploads')
-        .select('id, file_name, file_size, modality, status, qa_status, qa_score, qa_report, qa_completed_at, validation_results, created_at, uploaded_by')
+        .select('id, file_name, file_size, file_type, modality, status, qa_status, qa_score, qa_report, qa_completed_at, validation_results, created_at, uploaded_by')
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -164,6 +165,7 @@ export default function QAReportViewer({ userId, reports = [] }: QAReportViewerP
                   <TableRow className="bg-muted/50">
                     <TableHead className="font-semibold">Nom du Fichier</TableHead>
                     <TableHead className="font-semibold">Modalité</TableHead>
+                    <TableHead className="font-semibold">Type de Fichier</TableHead>
                     <TableHead className="font-semibold">Taille</TableHead>
                     <TableHead className="font-semibold">Statut CQ</TableHead>
                     <TableHead className="font-semibold">Score CQ</TableHead>
@@ -184,6 +186,15 @@ export default function QAReportViewer({ userId, reports = [] }: QAReportViewerP
                         </TableCell>
                         <TableCell>
                           {getModalityBadge(report.modality)}
+                        </TableCell>
+                        <TableCell>
+                          {report.file_type ? (
+                            <Badge variant="secondary" className="text-xs">
+                              {report.file_type.replace('wearable-', '').replace('clinical-', '').replace('neuropsychological-', '')}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">-</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {formatFileSize(report.file_size)}
