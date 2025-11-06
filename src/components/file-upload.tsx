@@ -8,7 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Upload, FileIcon, X, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { createClient } from "../../supabase/client";
+import { analyzeCsvFile, CsvQaReport } from "@/utils/csv-qa";
+import CsvQaReportViewer from "@/components/csv-qa-report-viewer";
 
 export type DataModality = 'clinical' | 'wearable' | 'neuropsychological' | 'mri' | 'genomic';
 
@@ -24,16 +27,99 @@ export default function FileUpload({ onUploadComplete, preselectedModality }: Fi
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [qaReport, setQaReport] = useState<CsvQaReport | null>(null);
+  const [showQaReport, setShowQaReport] = useState(false);
+  const [runningQa, setRunningQa] = useState(false);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
       setError(null);
       setUploadSuccess(false);
+      setQaReport(null);
     }
   };
 
+  const isCsvFile = (fileName: string, modalityType: DataModality | ''): boolean => {
+    const csvModalities: DataModality[] = ['clinical', 'wearable', 'neuropsychological'];
+    return csvModalities.includes(modalityType as DataModality) && 
+           (fileName.toLowerCase().endsWith('.csv') || fileName.toLowerCase().endsWith('.txt'));
+  };
+
+  const runQaAnalysis = async (): Promise<boolean> => {
+    if (!selectedFile) return false;
+
+    console.log('runQaAnalysis started for file:', selectedFile.name);
+    setRunningQa(true);
+    setError(null);
+    setProgress(10); // Show initial progress
+
+    try {
+      // Simulate progress during analysis
+      setProgress(30);
+      console.log('Calling analyzeCsvFile...');
+      const report = await analyzeCsvFile(selectedFile);
+      console.log('QA report received:', report);
+      setProgress(90);
+      setQaReport(report);
+      setProgress(100);
+      
+      // Small delay to show completion
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // ALWAYS show the QA report so user can review it
+      console.log('QA analysis complete, showing report to user');
+      setShowQaReport(true);
+      return false; // Wait for user to review and approve
+      
+    } catch (err: any) {
+      console.error('QA Analysis error:', err);
+      setError(`QA Analysis failed: ${err.message}`);
+      return false;
+    } finally {
+      setRunningQa(false);
+    }
+  };
+
+  const handleQaApprove = () => {
+    setShowQaReport(false);
+    performUpload();
+  };
+
+  const handleQaReject = () => {
+    setShowQaReport(false);
+    setSelectedFile(null);
+    setQaReport(null);
+    setError('Upload cancelled due to QA issues');
+  };
+
   const handleUpload = async () => {
+    if (!selectedFile || !modality) {
+      return;
+    }
+
+    console.log('Starting upload for:', selectedFile.name, 'modality:', modality);
+    console.log('Is CSV file?', isCsvFile(selectedFile.name, modality));
+
+    // For CSV files (clinical, wearable, neuropsychological), run QA first
+    if (isCsvFile(selectedFile.name, modality)) {
+      console.log('Running QA analysis for CSV file');
+      const qaPass = await runQaAnalysis();
+      console.log('QA analysis result:', qaPass, 'QA Report:', qaReport);
+      if (!qaPass) {
+        console.log('QA did not pass, stopping upload');
+        return; // QA failed or needs review, stop here
+      }
+    } else {
+      console.log('Not a CSV file, skipping QA');
+    }
+
+    // If QA passed or not a CSV file, proceed with upload
+    console.log('Proceeding with upload, qaReport:', qaReport);
+    await performUpload();
+  };
+
+  const performUpload = async () => {
     if (!selectedFile || !modality) {
       return;
     }
@@ -78,6 +164,35 @@ export default function FileUpload({ onUploadComplete, preselectedModality }: Fi
       // Calculate file checksum (simple hash using file size and name)
       const checksum = `${selectedFile.size}-${selectedFile.name}-${timestamp}`;
 
+      // Prepare validation results from QA report
+      const validationResults = qaReport ? {
+        qa_passed: qaReport.isValid,
+        qa_score: qaReport.isValid ? ((100 - qaReport.missingValuesPercentage + 100 - qaReport.duplicateRowsPercentage) / 2) : 0,
+        total_rows: qaReport.totalRows,
+        total_columns: qaReport.totalColumns,
+        missing_values_percentage: qaReport.missingValuesPercentage,
+        duplicate_rows_count: qaReport.duplicateRowsCount,
+        errors_count: qaReport.errors.length,
+        warnings_count: qaReport.warnings.length,
+        analyzed_at: qaReport.analyzedAt
+      } : {};
+
+      // Determine QA status
+      const qaStatus = qaReport 
+        ? (qaReport.errors.length > 0 ? 'failed' : 
+           qaReport.warnings.length > 0 ? 'passed_with_warnings' : 'passed')
+        : 'not_started';
+
+      const qaScore = qaReport && qaReport.isValid
+        ? (100 - qaReport.missingValuesPercentage + 100 - qaReport.duplicateRowsPercentage) / 2
+        : null;
+
+      console.log('Saving to database with QA data:', {
+        qaStatus,
+        qaScore,
+        hasQaReport: !!qaReport
+      });
+
       // Insert record into data_uploads table
       const { data: dbData, error: dbError } = await supabase
         .from('data_uploads')
@@ -90,6 +205,11 @@ export default function FileUpload({ onUploadComplete, preselectedModality }: Fi
           checksum: checksum,
           status: 'completed',
           progress: 100,
+          validation_results: validationResults,
+          qa_status: qaStatus,
+          qa_score: qaScore,
+          qa_report: qaReport || null,
+          qa_completed_at: qaReport ? new Date().toISOString() : null,
           completed_at: new Date().toISOString()
         })
         .select()
@@ -102,6 +222,8 @@ export default function FileUpload({ onUploadComplete, preselectedModality }: Fi
         throw new Error(`Failed to save upload record: ${dbError.message}`);
       }
 
+      console.log('Database record created successfully:', dbData);
+
       setProgress(100);
       setUploadSuccess(true);
       
@@ -111,6 +233,7 @@ export default function FileUpload({ onUploadComplete, preselectedModality }: Fi
         setModality(preselectedModality || '');
         setUploading(false);
         setUploadSuccess(false);
+        setQaReport(null);
         
         if (onUploadComplete) {
           onUploadComplete(dbData);
@@ -238,6 +361,19 @@ export default function FileUpload({ onUploadComplete, preselectedModality }: Fi
           </Alert>
         )}
 
+        {runningQa && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Analyse CQ en cours...</span>
+              <span className="font-medium">{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+            <p className="text-xs text-muted-foreground text-center">
+              Vérification de la qualité des données CSV
+            </p>
+          </div>
+        )}
+
         {uploading && (
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
@@ -250,13 +386,39 @@ export default function FileUpload({ onUploadComplete, preselectedModality }: Fi
 
         <Button
           onClick={handleUpload}
-          disabled={!selectedFile || !modality || uploading}
+          disabled={!selectedFile || !modality || uploading || runningQa}
           className="w-full"
           size="lg"
         >
-          {uploading ? 'Téléchargement...' : 'Télécharger le Fichier'}
+          {runningQa ? 'Analyse CQ en cours...' : uploading ? 'Téléchargement...' : 'Télécharger le Fichier'}
         </Button>
       </CardContent>
+
+      {/* QA Report Dialog */}
+      <Dialog open={showQaReport} onOpenChange={setShowQaReport}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>CSV Quality Assurance Report</DialogTitle>
+            <DialogDescription>
+              Review the quality analysis results before uploading
+            </DialogDescription>
+          </DialogHeader>
+          
+          {qaReport && <CsvQaReportViewer report={qaReport} />}
+          
+          <DialogFooter className="flex justify-between gap-2">
+            <Button variant="outline" onClick={handleQaReject} disabled={uploading}>
+              Cancel Upload
+            </Button>
+            <Button 
+              onClick={handleQaApprove} 
+              disabled={uploading || (qaReport ? !qaReport.isValid : false)}
+            >
+              {qaReport && !qaReport.isValid ? 'Cannot Upload (QA Failed)' : 'Proceed with Upload'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

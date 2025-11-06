@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '../../supabase/client'
 import {
   DropdownMenu,
@@ -57,8 +58,15 @@ export default function DashboardNavbar() {
     <nav className="w-full border-b border-border bg-card py-4">
       <div className="container mx-auto px-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <Link href="/dashboard" prefetch className="text-xl font-bold">
-            Portail FrenchMinds
+          <Link href="/dashboard" prefetch className="flex items-center">
+            <Image 
+              src="/ff-logo.png" 
+              alt="FrenchMinds Logo" 
+              width={180} 
+              height={60}
+              className="h-12 w-auto"
+              priority
+            />
           </Link>
           {getRoleBadge()}
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import FileUpload, { DataModality } from "@/components/file-upload";
 import UploadList from "@/components/upload-list";
@@ -8,6 +8,7 @@ import QAReportViewer from "@/components/qa-report-viewer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, FileCheck, Activity, Brain, Dna, Scan, FileSpreadsheet, ArrowLeft } from "lucide-react";
+import { createClient } from "../../supabase/client";
 
 interface ModalityInfo {
   id: DataModality;
@@ -76,6 +77,18 @@ const modalities: ModalityInfo[] = [
 export default function PIDashboard() {
   const [uploads, setUploads] = useState<any[]>([]);
   const [selectedModality, setSelectedModality] = useState<DataModality | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getUserId = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+    };
+    getUserId();
+  }, []);
 
   const handleUploadComplete = (fileData: any) => {
     const newUpload = {
@@ -186,8 +199,13 @@ export default function PIDashboard() {
                     <h2 className="text-2xl font-semibold mb-4">Historique des Téléchargements</h2>
                     <UploadList uploads={uploads} />
                   </div>
-                  <QAReportViewer />
+                  <QAReportViewer userId={userId || undefined} />
                 </div>
+              )}
+              
+              {/* Show QA Report even without uploads */}
+              {uploads.length === 0 && userId && (
+                <QAReportViewer userId={userId} />
               )}
             </>
           ) : (
@@ -214,7 +232,7 @@ export default function PIDashboard() {
                   <UploadList uploads={uploads} />
                 </div>
 
-                <QAReportViewer />
+                {userId && <QAReportViewer userId={userId} />}
               </div>
             </>
           )}

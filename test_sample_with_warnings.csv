@@ -1,0 +1,13 @@
+patient_id,age,gender,weight_kg,height_cm,blood_pressure,heart_rate,temperature_c,diagnosis
+P001,45,M,75.5,178,120/80,72,36.8,Healthy
+P002,52,F,,165,130/85,78,37.1,Hypertension
+P003,38,M,82.0,,115/75,68,36.6,Healthy
+P004,61,F,70.5,162,,82,37.0,Hypertension Stage 2
+P005,29,M,88.5,185,110/70,,36.9,Healthy
+P006,47,F,62.3,158,125/80,75,,Pre-hypertension
+P007,55,M,95.0,175,145/95,88,37.2,Hypertension Stage 2
+P008,,F,58.7,160,118/76,70,36.8,Healthy
+P009,42,M,78.9,172,122/82,74,36.9,Pre-hypertension
+P010,50,F,72.1,168,135/88,80,37.0,Hypertension Stage 1
+P002,52,F,,165,130/85,78,37.1,Hypertension
+

@@ -65,6 +65,10 @@ export type Database = {
           metadata: Json | null
           modality: Database["public"]["Enums"]["data_modality"]
           progress: number | null
+          qa_completed_at: string | null
+          qa_report: Json | null
+          qa_score: number | null
+          qa_status: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: Database["public"]["Enums"]["upload_status"] | null
@@ -83,6 +87,10 @@ export type Database = {
           metadata?: Json | null
           modality: Database["public"]["Enums"]["data_modality"]
           progress?: number | null
+          qa_completed_at?: string | null
+          qa_report?: Json | null
+          qa_score?: number | null
+          qa_status?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["upload_status"] | null
@@ -101,6 +109,10 @@ export type Database = {
           metadata?: Json | null
           modality?: Database["public"]["Enums"]["data_modality"]
           progress?: number | null
+          qa_completed_at?: string | null
+          qa_report?: Json | null
+          qa_score?: number | null
+          qa_status?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["upload_status"] | null
