@@ -143,15 +143,15 @@ export const resetPasswordAction = async (formData: FormData) => {
   const confirmPassword = formData.get("confirmPassword") as string;
 
   if (!password || !confirmPassword) {
-    encodedRedirect(
+    return encodedRedirect(
       "error",
-      "/protected/reset-password",
+      "/dashboard/reset-password",
       "Password and confirm password are required",
     );
   }
 
   if (password !== confirmPassword) {
-    encodedRedirect(
+    return encodedRedirect(
       "error",
       "/dashboard/reset-password",
       "Passwords do not match",
@@ -163,14 +163,14 @@ export const resetPasswordAction = async (formData: FormData) => {
   });
 
   if (error) {
-    encodedRedirect(
+    return encodedRedirect(
       "error",
       "/dashboard/reset-password",
       "Password update failed",
     );
   }
 
-  encodedRedirect("success", "/protected/reset-password", "Password updated");
+  return encodedRedirect("success", "/dashboard/reset-password", "Password updated successfully");
 };
 
 export const signOutAction = async () => {
@@ -307,4 +307,149 @@ export const deleteUploadAction = async (uploadId: string) => {
   }
 
   return { success: true, fileName: upload.file_name };
+};
+
+export const updateProfileAction = async (formData: FormData) => {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return encodedRedirect("error", "/dashboard/profile", "Not authenticated");
+  }
+
+  const fullName = formData.get("full_name")?.toString();
+
+  if (!fullName) {
+    return encodedRedirect("error", "/dashboard/profile", "Full name is required");
+  }
+
+  // Update user profile in public.users table
+  const { error: profileError } = await supabase
+    .from('users')
+    .update({
+      full_name: fullName,
+      name: fullName,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', user.id);
+
+  if (profileError) {
+    console.error('Error updating user profile:', profileError);
+    return encodedRedirect("error", "/dashboard/profile", "Failed to update profile");
+  }
+
+  // Update auth.users metadata
+  const { error: authError } = await supabase.auth.updateUser({
+    data: {
+      full_name: fullName,
+      name: fullName
+    }
+  });
+
+  if (authError) {
+    console.error('Error updating auth metadata:', authError);
+    return encodedRedirect("error", "/dashboard/profile", "Failed to update profile metadata");
+  }
+
+  return encodedRedirect("success", "/dashboard/profile", "Profile updated successfully");
+};
+
+export const deleteUserAction = async (userId: string) => {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
+
+  // Check if current user is admin
+  const { isAdmin } = await import("@/utils/auth");
+  const isCurrentUserAdmin = await isAdmin(user.id);
+  if (!isCurrentUserAdmin) {
+    throw new Error("Unauthorized: Admin access required");
+  }
+
+  // Prevent self-deletion
+  if (userId === user.id) {
+    throw new Error("You cannot delete your own account");
+  }
+
+  // Delete from user_roles table
+  const { error: roleError } = await supabase
+    .from('user_roles')
+    .delete()
+    .eq('user_id', userId);
+
+  if (roleError) {
+    throw new Error(`Failed to delete user role: ${roleError.message}`);
+  }
+
+  // Delete from users table
+  const { error: userError } = await supabase
+    .from('users')
+    .delete()
+    .eq('id', userId);
+
+  if (userError) {
+    console.error('Failed to delete user record:', userError);
+  }
+
+  // Log the action in audit_logs
+  await supabase.from('audit_logs').insert({
+    user_id: user.id,
+    action: 'delete_user',
+    resource_type: 'user',
+    resource_id: userId,
+    outcome: 'success',
+    details: { deleted_user_id: userId }
+  });
+
+  return { success: true };
+};
+
+export const promoteToAdminAction = async (userId: string) => {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
+
+  // Check if current user is admin
+  const { isAdmin } = await import("@/utils/auth");
+  const isCurrentUserAdmin = await isAdmin(user.id);
+  if (!isCurrentUserAdmin) {
+    throw new Error("Unauthorized: Admin access required");
+  }
+
+  // Update user role to admin
+  const { error } = await supabase
+    .from('user_roles')
+    .update({
+      role: 'admin',
+      approved: true,
+      approved_by: user.id,
+      approved_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('user_id', userId);
+
+  if (error) {
+    throw new Error(`Failed to promote user to admin: ${error.message}`);
+  }
+
+  // Log the action in audit_logs
+  await supabase.from('audit_logs').insert({
+    user_id: user.id,
+    action: 'promote_to_admin',
+    resource_type: 'user_role',
+    resource_id: userId,
+    outcome: 'success',
+    details: { promoted_user_id: userId }
+  });
+
+  return { success: true };
 };

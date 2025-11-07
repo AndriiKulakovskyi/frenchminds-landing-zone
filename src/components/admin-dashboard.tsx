@@ -5,9 +5,10 @@ import DashboardNavbar from "@/components/dashboard-navbar";
 import UserApproval from "@/components/user-approval";
 import AdminUploadsTable from "@/components/admin-uploads-table";
 import QAReportViewer from "@/components/qa-report-viewer";
+import UserManagement from "@/components/user-management";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, UserCheck, FileCheck, Shield } from "lucide-react";
+import { Upload, UserCheck, FileCheck, Shield, Users } from "lucide-react";
 import { createClient } from "../../supabase/client";
 
 export default function AdminDashboard() {
@@ -15,6 +16,7 @@ export default function AdminDashboard() {
   const [totalUploads, setTotalUploads] = useState(0);
   const [treatedUploads, setTreatedUploads] = useState(0);
   const [notTreatedUploads, setNotTreatedUploads] = useState(0);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   // Fetch statistics
@@ -42,6 +44,13 @@ export default function AdminDashboard() {
           setTreatedUploads(uploads.filter(u => u.reviewed_by !== null).length);
           setNotTreatedUploads(uploads.filter(u => u.reviewed_by === null).length);
         }
+
+        // Fetch total users count
+        const { count: usersCount } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true });
+
+        setTotalUsers(usersCount || 0);
       } catch (error) {
         console.error('Error fetching stats:', error);
       } finally {
@@ -57,6 +66,13 @@ export default function AdminDashboard() {
   };
 
   const stats = [
+    {
+      title: 'Total Users',
+      value: isLoadingStats ? '...' : totalUsers.toString(),
+      change: pendingApprovals > 0 ? `${pendingApprovals} pending approval` : 'All approved',
+      icon: Users,
+      color: 'text-purple-600',
+    },
     {
       title: 'Total Uploads',
       value: isLoadingStats ? '...' : totalUploads.toString(),
@@ -77,13 +93,6 @@ export default function AdminDashboard() {
       change: totalUploads > 0 ? `${Math.round((treatedUploads / totalUploads) * 100)}%` : '0%',
       icon: FileCheck,
       color: 'text-green-600',
-    },
-    {
-      title: 'Compliance Score',
-      value: '100%',
-      change: '0%',
-      icon: Shield,
-      color: 'text-purple-600',
     },
   ];
 
@@ -121,7 +130,7 @@ export default function AdminDashboard() {
           </div>
 
           <Tabs defaultValue="uploads" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid bg-muted p-1">
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:w-auto lg:inline-grid bg-muted p-1">
               <TabsTrigger value="uploads" className="data-[state=active]:bg-background">
                 <Upload className="h-4 w-4 mr-2" />
                 All Uploads
@@ -133,6 +142,10 @@ export default function AdminDashboard() {
               <TabsTrigger value="approvals" className="data-[state=active]:bg-background">
                 <UserCheck className="h-4 w-4 mr-2" />
                 User Approvals
+              </TabsTrigger>
+              <TabsTrigger value="users" className="data-[state=active]:bg-background">
+                <Users className="h-4 w-4 mr-2" />
+                User Management
               </TabsTrigger>
             </TabsList>
 
@@ -146,6 +159,10 @@ export default function AdminDashboard() {
 
             <TabsContent value="approvals">
               <UserApproval onApprove={handleUserApproved} onReject={handleUserApproved} />
+            </TabsContent>
+
+            <TabsContent value="users">
+              <UserManagement />
             </TabsContent>
           </Tabs>
         </div>
