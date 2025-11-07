@@ -38,6 +38,10 @@ export default function UserApproval({ users = [], onApprove, onReject }: UserAp
       try {
         const supabase = createClient();
         
+        // First check if current user is authenticated
+        const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
+        console.log('Current user:', currentUser?.id, authError);
+        
         // First get pending user roles
         const { data: rolesData, error: rolesError } = await supabase
           .from('user_roles')
@@ -45,21 +49,26 @@ export default function UserApproval({ users = [], onApprove, onReject }: UserAp
           .eq('approved', false)
           .order('created_at', { ascending: false });
 
+        console.log('Roles query result:', { rolesData, rolesError });
+
         if (rolesError) {
           console.error('Error fetching pending roles:', rolesError);
           toast({
             title: "Error",
-            description: "Failed to load pending users",
+            description: `Failed to load pending users: ${rolesError.message}`,
             variant: "destructive",
           });
           return;
         }
 
         if (!rolesData || rolesData.length === 0) {
+          console.log('No pending users found');
           setPendingUsers([]);
           setIsLoading(false);
           return;
         }
+
+        console.log(`Found ${rolesData.length} pending user roles`);
 
         // Get user details from auth.users via public.users
         const userIds = rolesData.map(role => role.user_id);
@@ -67,6 +76,8 @@ export default function UserApproval({ users = [], onApprove, onReject }: UserAp
           .from('users')
           .select('id, email, full_name')
           .in('id', userIds);
+
+        console.log('Users query result:', { usersData, usersError });
 
         if (usersError) {
           console.error('Error fetching user details:', usersError);
@@ -86,7 +97,7 @@ export default function UserApproval({ users = [], onApprove, onReject }: UserAp
           };
         });
 
-        console.log('Fetched pending users:', formattedUsers);
+        console.log('Formatted pending users:', formattedUsers);
         setPendingUsers(formattedUsers);
       } catch (error) {
         console.error('Error fetching pending users:', error);
