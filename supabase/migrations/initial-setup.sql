@@ -71,11 +71,16 @@ CREATE TABLE IF NOT EXISTS public.data_uploads (
     file_name text NOT NULL,
     file_size bigint NOT NULL,
     file_path text,
+    file_type text DEFAULT 'unknown',
     checksum text,
     status upload_status DEFAULT 'pending',
     progress integer DEFAULT 0,
     validation_results jsonb DEFAULT '{}',
     metadata jsonb DEFAULT '{}',
+    qa_status text DEFAULT 'not_started',
+    qa_report jsonb,
+    qa_score numeric,
+    qa_completed_at timestamp with time zone,
     reviewed_by uuid REFERENCES auth.users(id) ON DELETE SET NULL,
     reviewed_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
@@ -117,6 +122,8 @@ CREATE INDEX IF NOT EXISTS idx_data_uploads_uploaded_by ON public.data_uploads(u
 CREATE INDEX IF NOT EXISTS idx_data_uploads_reviewed_by ON public.data_uploads(reviewed_by);
 CREATE INDEX IF NOT EXISTS idx_data_uploads_reviewed_at ON public.data_uploads(reviewed_at);
 CREATE INDEX IF NOT EXISTS idx_data_uploads_created_at ON public.data_uploads(created_at);
+CREATE INDEX IF NOT EXISTS idx_data_uploads_file_type ON public.data_uploads(file_type);
+CREATE INDEX IF NOT EXISTS idx_data_uploads_qa_status ON public.data_uploads(qa_status);
 
 -- Audit logs indexes
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON public.audit_logs(user_id);
@@ -149,6 +156,20 @@ ON public.users
 FOR UPDATE 
 USING (auth.uid()::text = user_id);
 
+DROP POLICY IF EXISTS "Admins can delete users" ON public.users;
+CREATE POLICY "Admins can delete users"
+ON public.users
+FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.user_roles
+    WHERE user_roles.user_id = auth.uid()
+    AND user_roles.role = 'admin'
+    AND user_roles.approved = true
+  )
+);
+
 -- User roles policies
 DROP POLICY IF EXISTS "Users can view roles" ON public.user_roles;
 CREATE POLICY "Users can view roles" 
@@ -163,7 +184,7 @@ FOR UPDATE
 USING (
     EXISTS (
         SELECT 1 FROM public.user_roles
-        WHERE user_id = auth.uid() AND role = 'admin'
+        WHERE user_id = auth.uid() AND role = 'admin' AND approved = true
     )
 );
 
@@ -172,6 +193,20 @@ CREATE POLICY "Users can insert own role"
 ON public.user_roles 
 FOR INSERT 
 WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Admins can delete user roles" ON public.user_roles;
+CREATE POLICY "Admins can delete user roles"
+ON public.user_roles
+FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.user_roles
+    WHERE user_roles.user_id = auth.uid()
+    AND user_roles.role = 'admin'
+    AND user_roles.approved = true
+  )
+);
 
 -- Data uploads policies
 DROP POLICY IF EXISTS "Users can view uploads" ON public.data_uploads;
@@ -199,8 +234,22 @@ FOR UPDATE
 USING (
     EXISTS (
         SELECT 1 FROM public.user_roles
-        WHERE user_id = auth.uid() AND role = 'admin'
+        WHERE user_id = auth.uid() AND role = 'admin' AND approved = true
     )
+);
+
+DROP POLICY IF EXISTS "Admins can delete any upload" ON public.data_uploads;
+CREATE POLICY "Admins can delete any upload"
+ON public.data_uploads
+FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.user_roles
+    WHERE user_roles.user_id = auth.uid()
+    AND user_roles.role = 'admin'
+    AND user_roles.approved = true
+  )
 );
 
 -- Audit logs policies
@@ -287,7 +336,21 @@ USING (
     bucket_id = 'clinical-data-uploads' AND
     EXISTS (
         SELECT 1 FROM public.user_roles
-        WHERE user_id = auth.uid() AND role = 'admin'
+        WHERE user_id = auth.uid() AND role = 'admin' AND approved = true
+    )
+);
+
+-- Allow admins to delete all files
+DROP POLICY IF EXISTS "Allow admins to delete all files" ON storage.objects;
+CREATE POLICY "Allow admins to delete all files"
+ON storage.objects
+FOR DELETE
+TO authenticated
+USING (
+    bucket_id = 'clinical-data-uploads' AND
+    EXISTS (
+        SELECT 1 FROM public.user_roles
+        WHERE user_id = auth.uid() AND role = 'admin' AND approved = true
     )
 );
 
@@ -369,12 +432,16 @@ DO $$
 BEGIN
     RAISE NOTICE '✓ Database setup completed successfully!';
     RAISE NOTICE '✓ Tables created: users, user_roles, data_uploads, audit_logs';
+    RAISE NOTICE '✓ QA columns added: qa_status, qa_report, qa_score, qa_completed_at, file_type';
     RAISE NOTICE '✓ Storage bucket created: clinical-data-uploads';
-    RAISE NOTICE '✓ RLS policies configured';
+    RAISE NOTICE '✓ RLS policies configured (including admin delete permissions)';
+    RAISE NOTICE '✓ Admin permissions: delete users, delete user roles, delete uploads';
     RAISE NOTICE '✓ Triggers and functions set up';
+    RAISE NOTICE '✓ Indexes created for optimal query performance';
     RAISE NOTICE '';
     RAISE NOTICE 'Next steps:';
     RAISE NOTICE '1. Create admin users in the users table';
-    RAISE NOTICE '2. Assign admin roles in user_roles table';
+    RAISE NOTICE '2. Assign admin roles in user_roles table with approved=true';
     RAISE NOTICE '3. Test file uploads through the application';
+    RAISE NOTICE '4. Test QA validation for CSV files';
 END $$; 
