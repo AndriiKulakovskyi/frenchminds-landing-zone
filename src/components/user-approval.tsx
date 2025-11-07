@@ -40,7 +40,7 @@ export default function UserApproval({ users = [], onApprove, onReject }: UserAp
         
         // First check if current user is authenticated
         const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
-        console.log('Current user:', currentUser?.id, authError);
+        console.log('Current user:', currentUser?.id, currentUser?.email, authError);
         
         // First get pending user roles
         const { data: rolesData, error: rolesError } = await supabase
@@ -49,7 +49,11 @@ export default function UserApproval({ users = [], onApprove, onReject }: UserAp
           .eq('approved', false)
           .order('created_at', { ascending: false });
 
-        console.log('Roles query result:', { rolesData, rolesError });
+        console.log('Roles query result:', { 
+          rolesData, 
+          rolesError,
+          count: rolesData?.length 
+        });
 
         if (rolesError) {
           console.error('Error fetching pending roles:', rolesError);
@@ -62,22 +66,44 @@ export default function UserApproval({ users = [], onApprove, onReject }: UserAp
         }
 
         if (!rolesData || rolesData.length === 0) {
-          console.log('No pending users found');
+          console.log('No pending users found in user_roles table');
+          
+          // Debug: Check if there are ANY roles at all
+          const { data: allRoles, count: totalCount } = await supabase
+            .from('user_roles')
+            .select('*', { count: 'exact', head: true });
+          
+          console.log(`Total roles in database: ${totalCount}`);
+          
+          // Debug: Check if there are users without roles
+          const { data: usersWithoutRoles } = await supabase
+            .from('users')
+            .select('id, email, full_name')
+            .limit(20);
+          
+          console.log('Users in database:', usersWithoutRoles);
+          
           setPendingUsers([]);
           setIsLoading(false);
           return;
         }
 
-        console.log(`Found ${rolesData.length} pending user roles`);
+        console.log(`Found ${rolesData.length} pending user roles:`, rolesData);
 
         // Get user details from auth.users via public.users
         const userIds = rolesData.map(role => role.user_id);
+        console.log('Looking up user details for IDs:', userIds);
+        
         const { data: usersData, error: usersError } = await supabase
           .from('users')
           .select('id, email, full_name')
           .in('id', userIds);
 
-        console.log('Users query result:', { usersData, usersError });
+        console.log('Users query result:', { 
+          usersData, 
+          usersError,
+          count: usersData?.length 
+        });
 
         if (usersError) {
           console.error('Error fetching user details:', usersError);
@@ -86,6 +112,9 @@ export default function UserApproval({ users = [], onApprove, onReject }: UserAp
         // Combine the data
         const formattedUsers = rolesData.map(role => {
           const userDetail = usersData?.find(u => u.id === role.user_id);
+          if (!userDetail) {
+            console.warn(`No user details found for role user_id: ${role.user_id}`);
+          }
           return {
             id: role.id,
             user_id: role.user_id,
