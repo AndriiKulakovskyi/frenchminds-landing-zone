@@ -5,10 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, CheckCircle, FileIcon, Loader2, AlertCircle } from "lucide-react";
+import { Download, CheckCircle, FileIcon, Loader2, AlertCircle, Trash2 } from "lucide-react";
 import { createClient } from "../../supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { deleteUploadAction } from "@/app/actions";
 
 type FilterType = 'all' | 'treated' | 'not-treated';
 
@@ -42,6 +44,9 @@ export default function AdminUploadsTable() {
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [treatingId, setTreatingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchUploads = async () => {
@@ -201,6 +206,41 @@ export default function AdminUploadsTable() {
     }
   };
 
+  const handleFirstDeleteClick = (uploadId: string) => {
+    setDeleteDialogOpen(uploadId);
+  };
+
+  const handleSecondDeleteClick = (uploadId: string) => {
+    setDeleteDialogOpen(null);
+    setConfirmDeleteOpen(uploadId);
+  };
+
+  const handleDeleteUpload = async (uploadId: string) => {
+    setDeletingId(uploadId);
+    setConfirmDeleteOpen(null);
+
+    try {
+      const result = await deleteUploadAction(uploadId);
+      
+      toast({
+        title: "Success",
+        description: `File "${result.fileName}" has been permanently deleted from storage and database`,
+      });
+
+      // Refresh the list
+      await fetchUploads();
+    } catch (err: any) {
+      console.error('Delete error:', err);
+      toast({
+        title: "Delete Failed",
+        description: err.message || 'Failed to delete upload',
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -346,7 +386,7 @@ export default function AdminUploadsTable() {
                           size="sm"
                           variant="outline"
                           onClick={() => handleDownload(upload)}
-                          disabled={downloadingId === upload.id}
+                          disabled={downloadingId === upload.id || deletingId === upload.id}
                         >
                           {downloadingId === upload.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -361,7 +401,7 @@ export default function AdminUploadsTable() {
                           <Button
                             size="sm"
                             onClick={() => handleMarkAsTreated(upload.id)}
-                            disabled={treatingId === upload.id}
+                            disabled={treatingId === upload.id || deletingId === upload.id}
                           >
                             {treatingId === upload.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -373,6 +413,100 @@ export default function AdminUploadsTable() {
                             )}
                           </Button>
                         )}
+                        
+                        {/* First confirmation dialog */}
+                        <AlertDialog open={deleteDialogOpen === upload.id} onOpenChange={(open) => !open && setDeleteDialogOpen(null)}>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleFirstDeleteClick(upload.id)}
+                              disabled={deletingId === upload.id}
+                            >
+                              {deletingId === upload.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Delete
+                                </>
+                              )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure you want to delete this file?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action will permanently delete:
+                                <div className="mt-3 p-3 bg-muted rounded-md">
+                                  <p className="font-semibold">{upload.file_name}</p>
+                                  <p className="text-sm mt-1">Uploaded by: {upload.uploader_email}</p>
+                                  <p className="text-sm">Modality: {upload.modality}</p>
+                                  <p className="text-sm">Size: {formatFileSize(upload.file_size)}</p>
+                                </div>
+                                <p className="mt-3 text-red-600 font-semibold">
+                                  This will remove the file from storage and all database records.
+                                </p>
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleSecondDeleteClick(upload.id);
+                                }}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Continue to Final Confirmation
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
+                        {/* Second confirmation dialog */}
+                        <AlertDialog open={confirmDeleteOpen === upload.id} onOpenChange={(open) => !open && setConfirmDeleteOpen(null)}>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="text-red-600">FINAL CONFIRMATION</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                <div className="space-y-3">
+                                  <p className="font-semibold text-foreground">
+                                    This is your last chance to cancel!
+                                  </p>
+                                  <p>
+                                    You are about to permanently delete <span className="font-semibold text-foreground">{upload.file_name}</span>
+                                  </p>
+                                  <div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md">
+                                    <p className="text-red-700 dark:text-red-400 font-semibold">
+                                      WARNING: This action CANNOT be undone!
+                                    </p>
+                                    <ul className="mt-2 space-y-1 text-sm text-red-600 dark:text-red-400">
+                                      <li>• The file will be removed from S3 storage</li>
+                                      <li>• All database records will be deleted</li>
+                                      <li>• This action is irreversible</li>
+                                    </ul>
+                                  </div>
+                                  <p className="text-sm">
+                                    Click "Delete Permanently" to proceed or "Cancel" to keep the file.
+                                  </p>
+                                </div>
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleDeleteUpload(upload.id);
+                                }}
+                                className="bg-red-600 text-white hover:bg-red-700"
+                              >
+                                Delete Permanently
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </TableCell>
                   </TableRow>

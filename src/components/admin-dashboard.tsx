@@ -120,12 +120,8 @@ export default function AdminDashboard() {
             ))}
           </div>
 
-          <Tabs defaultValue="approvals" className="space-y-6">
+          <Tabs defaultValue="uploads" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid bg-muted p-1">
-              <TabsTrigger value="approvals" className="data-[state=active]:bg-background">
-                <UserCheck className="h-4 w-4 mr-2" />
-                User Approvals
-              </TabsTrigger>
               <TabsTrigger value="uploads" className="data-[state=active]:bg-background">
                 <Upload className="h-4 w-4 mr-2" />
                 All Uploads
@@ -134,11 +130,11 @@ export default function AdminDashboard() {
                 <FileCheck className="h-4 w-4 mr-2" />
                 QA Status
               </TabsTrigger>
+              <TabsTrigger value="approvals" className="data-[state=active]:bg-background">
+                <UserCheck className="h-4 w-4 mr-2" />
+                User Approvals
+              </TabsTrigger>
             </TabsList>
-
-            <TabsContent value="approvals">
-              <UserApproval onApprove={handleUserApproved} />
-            </TabsContent>
 
             <TabsContent value="uploads">
               <AdminUploadsTable />
@@ -146,6 +142,10 @@ export default function AdminDashboard() {
 
             <TabsContent value="qa">
               <QAReportViewer />
+            </TabsContent>
+
+            <TabsContent value="approvals">
+              <UserApproval onApprove={handleUserApproved} onReject={handleUserApproved} />
             </TabsContent>
           </Tabs>
         </div>

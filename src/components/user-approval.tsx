@@ -23,9 +23,10 @@ interface PendingUser {
 interface UserApprovalProps {
   users?: PendingUser[];
   onApprove?: (userId: string) => void;
+  onReject?: (userId: string) => void;
 }
 
-export default function UserApproval({ users = [], onApprove }: UserApprovalProps) {
+export default function UserApproval({ users = [], onApprove, onReject }: UserApprovalProps) {
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -133,8 +134,9 @@ export default function UserApproval({ users = [], onApprove }: UserApprovalProp
       setPendingUsers(prev => prev.filter(u => u.user_id !== userId));
       toast({
         title: "Success",
-        description: "User rejected and removed",
+        description: "User rejected and removed from pending list",
       });
+      if (onReject) onReject(userId);
     } catch (error) {
       console.error('Error rejecting user:', error);
       toast({

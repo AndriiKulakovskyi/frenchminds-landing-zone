@@ -229,12 +229,82 @@ export const rejectUserAction = async (userId: string) => {
     throw new Error("Unauthorized: Admin access required");
   }
 
-  // Delete the user from auth.users (this will cascade to other tables)
-  const { error } = await supabase.auth.admin.deleteUser(userId);
+  // Delete from user_roles table (this is what we can do from client)
+  const { error: roleError } = await supabase
+    .from('user_roles')
+    .delete()
+    .eq('user_id', userId);
 
-  if (error) {
-    throw new Error(`Failed to reject user: ${error.message}`);
+  if (roleError) {
+    throw new Error(`Failed to delete user role: ${roleError.message}`);
   }
 
+  // Delete from users table
+  const { error: userError } = await supabase
+    .from('users')
+    .delete()
+    .eq('id', userId);
+
+  if (userError) {
+    console.error('Failed to delete user record:', userError);
+    // Don't throw error here as the role deletion is the critical part
+  }
+
+  // Note: We cannot delete from auth.users without admin service role key
+  // The user account will remain in auth but won't have any roles or access
+  // Admin should delete the auth user manually from Supabase dashboard if needed
+
   return { success: true };
+};
+
+export const deleteUploadAction = async (uploadId: string) => {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
+
+  // Check if current user is admin
+  const { isAdmin } = await import("@/utils/auth");
+  const isCurrentUserAdmin = await isAdmin(user.id);
+  if (!isCurrentUserAdmin) {
+    throw new Error("Unauthorized: Admin access required");
+  }
+
+  // Get upload details first
+  const { data: upload, error: fetchError } = await supabase
+    .from('data_uploads')
+    .select('file_path, file_name')
+    .eq('id', uploadId)
+    .single();
+
+  if (fetchError || !upload) {
+    throw new Error(`Failed to fetch upload details: ${fetchError?.message || 'Upload not found'}`);
+  }
+
+  // Delete file from S3 storage if file_path exists
+  if (upload.file_path) {
+    const { error: storageError } = await supabase.storage
+      .from('clinical-data-uploads')
+      .remove([upload.file_path]);
+
+    if (storageError) {
+      console.error('Failed to delete file from storage:', storageError);
+      throw new Error(`Failed to delete file from storage: ${storageError.message}`);
+    }
+  }
+
+  // Delete record from database
+  const { error: deleteError } = await supabase
+    .from('data_uploads')
+    .delete()
+    .eq('id', uploadId);
+
+  if (deleteError) {
+    throw new Error(`Failed to delete upload record: ${deleteError.message}`);
+  }
+
+  return { success: true, fileName: upload.file_name };
 };
